@@ -6,18 +6,18 @@ import tempfile
 import datetime
 
 
-def get_front_page_urls(subreddit, link_count):
-    reddit_opener = RedditUrlOpener()
+def get_front_page_urls(subreddit, link_count, username):
+    reddit_opener = RedditUrlOpener(username)
     front_page = reddit_opener.open("http://www.reddit.com" + subreddit + "/hot.json?limit=" + str(link_count))
     response_string = front_page.read().decode('utf-8')
     response_data = json.loads(response_string)
     return [child["data"]["url"] for child in response_data["data"]["children"]]
 
 
-def download_to_folder(url, folder):
+def download_to_folder(url, folder, username):
     try:
         with open(folder + "\\" + str(uuid4())+".jpg", 'wb') as f:
-            reddit_opener = RedditUrlOpener()
+            reddit_opener = RedditUrlOpener(username)
             f.write(reddit_opener.open(url).read())
             f.close()
     except:
@@ -61,18 +61,19 @@ def main():
     temp_folder = os.path.join(tempfile.gettempdir(), "redditdesktop")
     max_file_age_hours=1
     link_count = 15
+    username = "rmc00"
 
     setup_temp_directory(temp_folder)
 
     urls = []
     for subreddit in subreddits:
         print("Getting front page for " + subreddit)
-        urls.extend(get_front_page_urls(subreddit, link_count))
+        urls.extend(get_front_page_urls(subreddit, link_count, username))
 
     for url in urls:
         if url[-3:] in image_extensions:
             print("Downloading " + url)
-            download_to_folder(url, temp_folder)
+            download_to_folder(url, temp_folder, username)
 
     move_all_files(temp_folder, folder)
     delete_old_files(folder, max_file_age_hours)

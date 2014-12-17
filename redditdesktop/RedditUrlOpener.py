@@ -2,4 +2,6 @@ from urllib.request import FancyURLopener
 
 
 class RedditUrlOpener(FancyURLopener):
-    version= "/u/rmc00 getting awesome wallpapers"
+    def __init__(self, username):
+        FancyURLopener.__init__(self)
+        FancyURLopener.version = "/u/" + username + " getting awesome wallpapers"
