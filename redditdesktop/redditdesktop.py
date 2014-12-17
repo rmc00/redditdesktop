@@ -4,6 +4,7 @@ from RedditUrlOpener import RedditUrlOpener
 import os
 import tempfile
 import datetime
+import configparser
 
 
 def get_front_page_urls(subreddit, link_count, username):
@@ -32,6 +33,8 @@ def clear_folder(folder):
 
 
 def move_all_files(source, destination):
+    create_directory(source)
+    create_directory(destination)
     for the_file in os.listdir(source):
         file_path = os.path.join(source, the_file)
         if os.path.isfile(file_path):
@@ -39,10 +42,12 @@ def move_all_files(source, destination):
 
 
 def setup_temp_directory(folder):
-    if not os.path.exists(folder):
-        os.makedirs(folder)
+    create_directory(folder)
     clear_folder(folder)
 
+def create_directory(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 def delete_old_files(folder, hours):
     threshold = datetime.datetime.now() - datetime.timedelta(hours=hours)
@@ -54,29 +59,37 @@ def delete_old_files(folder, hours):
             os.remove(full_name)
 
 
-def main():
-    subreddits = ["/r/spaceporn", "/r/earthporn", "/r/seaporn", "/r/nationalgeographic", "/r/backgroundart", "/r/imaginarylandscapes"]
-    image_extensions = ["jpg", "gif", "png"]
-    folder = r"C:\Users\m01613\Pictures"
-    temp_folder = os.path.join(tempfile.gettempdir(), "redditdesktop")
-    max_file_age_hours=1
-    link_count = 15
-    username = "rmc00"
+def get_config():
+    config = configparser.ConfigParser()
+    config.read("config.ini")
+    return {
+        "subreddits" : config["DEFAULT"]["SubReddits"].split(","),
+        "username" : config["DEFAULT"]["RedditUserName"],
+        "link_count" : int(config["DEFAULT"]["LinkCount"]),
+        "image_extensions" : config["DEFAULT"]["ImageExtensions"].split(","),
+        "wallpaper_folder" : config["DEFAULT"]["WallpaperFolder"],
+        "max_file_age_hours" : int(config["DEFAULT"]["MaxFileAgeHours"]),
+        "wallpaper_folder" : config["DEFAULT"]["WallpaperFolder"]
+    }
 
+
+def main():
+    config = get_config()
+    temp_folder = os.path.join(tempfile.gettempdir(), "redditdesktop")
     setup_temp_directory(temp_folder)
 
     urls = []
-    for subreddit in subreddits:
+    for subreddit in config["subreddits"]:
         print("Getting front page for " + subreddit)
-        urls.extend(get_front_page_urls(subreddit, link_count, username))
+        urls.extend(get_front_page_urls(subreddit, config["link_count"], config["username"]))
 
     for url in urls:
-        if url[-3:] in image_extensions:
+        if url[-3:] in config["image_extensions"]:
             print("Downloading " + url)
-            download_to_folder(url, temp_folder, username)
+            download_to_folder(url, temp_folder, config["username"])
 
-    move_all_files(temp_folder, folder)
-    delete_old_files(folder, max_file_age_hours)
+    move_all_files(temp_folder, config["wallpaper_folder"])
+    delete_old_files(config["wallpaper_folder"], config["max_file_age_hours"])
 
 
 if __name__ == "__main__":
