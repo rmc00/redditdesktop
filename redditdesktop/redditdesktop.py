@@ -5,6 +5,8 @@ import os
 import tempfile
 import datetime
 import configparser
+import logging
+import logging.handlers
 
 
 def get_front_page_urls(subreddit, link_count, username):
@@ -17,12 +19,12 @@ def get_front_page_urls(subreddit, link_count, username):
 
 def download_to_folder(url, folder, username):
     try:
-        with open(folder + "\\" + str(uuid4())+".jpg", 'wb') as f:
+        with open(folder + "\\" + str(uuid4()) + ".jpg", 'wb') as f:
             reddit_opener = RedditUrlOpener(username)
             f.write(reddit_opener.open(url).read())
             f.close()
     except:
-        print("download failed for " + url)
+        logger.warn("download failed for " + url)
 
 
 def clear_folder(folder):
@@ -45,13 +47,15 @@ def setup_temp_directory(folder):
     create_directory(folder)
     clear_folder(folder)
 
+
 def create_directory(folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
 
+
 def delete_old_files(folder, hours):
     threshold = datetime.datetime.now() - datetime.timedelta(hours=hours)
-    print("files older than " + threshold.strftime("%m/%d/%Y %H:%M") + " will be deleted")
+    logger.info("files older than " + threshold.strftime("%m/%d/%Y %H:%M") + " will be deleted")
     for f in os.listdir(folder):
         full_name = os.path.join(folder, f)
         mod_time = datetime.datetime.fromtimestamp(os.stat(full_name).st_mtime)
@@ -63,14 +67,24 @@ def get_config():
     config = configparser.ConfigParser()
     config.read("config.ini")
     return {
-        "subreddits" : config["DEFAULT"]["SubReddits"].split(","),
-        "username" : config["DEFAULT"]["RedditUserName"],
-        "link_count" : int(config["DEFAULT"]["LinkCount"]),
-        "image_extensions" : config["DEFAULT"]["ImageExtensions"].split(","),
-        "wallpaper_folder" : config["DEFAULT"]["WallpaperFolder"],
-        "max_file_age_hours" : int(config["DEFAULT"]["MaxFileAgeHours"]),
-        "wallpaper_folder" : config["DEFAULT"]["WallpaperFolder"]
+        "subreddits": config["DEFAULT"]["SubReddits"].split(","),
+        "username": config["DEFAULT"]["RedditUserName"],
+        "link_count": int(config["DEFAULT"]["LinkCount"]),
+        "image_extensions": config["DEFAULT"]["ImageExtensions"].split(","),
+        "wallpaper_folder": config["DEFAULT"]["WallpaperFolder"],
+        "max_file_age_hours": int(config["DEFAULT"]["MaxFileAgeHours"]),
     }
+
+
+def setup_logger():
+    l = logging.getLogger(__name__)
+    l.setLevel(logging.INFO)
+    handler = logging.handlers.RotatingFileHandler('redditdesktop.log', maxBytes=4096)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    l.addHandler(handler)
+    return l
 
 
 def main():
@@ -80,12 +94,12 @@ def main():
 
     urls = []
     for subreddit in config["subreddits"]:
-        print("Getting front page for " + subreddit)
+        logger.info("Getting front page for " + subreddit)
         urls.extend(get_front_page_urls(subreddit, config["link_count"], config["username"]))
 
     for url in urls:
         if url[-3:] in config["image_extensions"]:
-            print("Downloading " + url)
+            logger.info("Downloading " + url)
             download_to_folder(url, temp_folder, config["username"])
 
     move_all_files(temp_folder, config["wallpaper_folder"])
@@ -93,4 +107,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logger = setup_logger()
     main()
